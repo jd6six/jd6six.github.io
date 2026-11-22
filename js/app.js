@@ -485,6 +485,14 @@ function dureePrestation(phases) {
   return { secondes: phases.reduce((somme, p) => somme + p.cible * 60, 0), mesures: 0 };
 }
 
+/* Une durée lisible d'un coup d'œil : « 2 h 03 » ou « 45 min ». */
+function heuresMinutes(secondes) {
+  const minutes = Math.round(secondes / 60);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? h + " h " + String(m).padStart(2, "0") : m + " min";
+}
+
 function euros(montant) {
   return Math.round(montant).toLocaleString("fr-FR") + " €";
 }
@@ -592,10 +600,13 @@ function rendreRentabilite(phases) {
   const r = calculerRentabilite(renta, duree.secondes);
   const presta = trouverPrestation(session.prestaId);
 
-  $("renta-duree").textContent = mmss(duree.secondes);
+  // D'où vient cette durée ? On le dit clairement : soit elle a été chronométrée, soit c'est une estimation.
+  $("renta-duree").textContent = heuresMinutes(duree.secondes);
   $("renta-source").textContent = duree.mesures > 0
-    ? presta.nom + " : moyenne mesurée sur " + duree.mesures + " session(s) complète(s)."
-    : presta.nom + " : estimation d'après tes cibles. Enregistre une session complète pour avoir ta vraie durée.";
+    ? presta.nom + " : c'est ta moyenne, chronométrée sur " + duree.mesures + " session(s) complète(s)."
+    : presta.nom + " : personne ne l'a encore mesuré. C'est la somme de tes " + phases.length
+      + " durées cibles (onglet Cibles). Chronomètre une session complète et ce chiffre sera remplacé par ta vraie durée."
+      + " Pour une autre prestation, change-la dans l'onglet Chrono.";
 
   // Le verdict : une phrase, et une couleur selon la situation.
   const parJour = r.pointMortJour === null ? null : unChiffre(Math.ceil(r.pointMortJour * 10) / 10);
@@ -645,7 +656,7 @@ function rendreRentabilite(phases) {
   } else if (suivante === null) {
     minute.textContent = "Avec ce battement, impossible de caser une voiture de plus dans la journée, même en allant plus vite.";
   } else {
-    minute.textContent = "Gagne " + suivante.minutesAGagner + " min par voiture (de " + mmss(duree.secondes) + " à " + mmss(suivante.dureeVisee)
+    minute.textContent = "Gagne " + suivante.minutesAGagner + " min par voiture (de " + heuresMinutes(duree.secondes) + " à " + heuresMinutes(suivante.dureeVisee)
       + ") : tu en cases " + suivante.capaciteJour + " par jour au lieu de " + r.capaciteJour
       + ", soit " + euros(suivante.gainMensuel) + " de plus par mois à remplissage égal.";
   }
