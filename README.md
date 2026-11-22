@@ -11,7 +11,7 @@ Pit Stop chronomètre un nettoyage automobile phase par phase. À l'écran, la v
 - Annonces vocales (API Web Speech) et écran maintenu allumé (API Wake Lock).
 - Historique des sessions, records, moyennes et export en JSON.
 - Cibles ajustables, avec adoption de sa moyenne réelle.
-- Onglet Rentabilité : la durée mesurée par le chrono donne la capacité d'une journée et le point mort.
+- Onglet Rentabilité : la durée mesurée par le chrono donne la capacité d'une journée, le point mort, le résultat du mois (graphique SVG dessiné en JavaScript) et ce que rapporte chaque minute gagnée.
 - Thème clair ou sombre et choix de la voix mémorisés par cookies.
 
 ## Organisation des fichiers

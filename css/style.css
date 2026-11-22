@@ -218,9 +218,32 @@ input[type="range"] { width: 100%; margin: 8px 0 0; accent-color: var(--accent);
   border: 1px solid var(--ok); border-left-width: 6px; transition: border-color .3s;
 }
 .verdict.trop { border-color: var(--trop); }
-.jauge-haute { height: 14px; }
-.jauge-haute .jauge-remplie { transition: width .35s ease, background-color .3s; }
+.verdict.juste { border-color: var(--accent); }
+.curseurs h4 { margin: 18px 0 10px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.curseurs h4:first-child { margin-top: 0; }
+
+/* Le graphique : une droite (le résultat), l'axe du zéro, la limite de capacité, deux points. */
+.graphique { display: block; width: 100%; height: auto; margin-top: 10px; }
+.graphique .zone-perte { fill: var(--trop); opacity: .13; }
+.graphique .zone-gain { fill: var(--ok); opacity: .13; }
+.graphique .axe { stroke: var(--discret); stroke-width: 1; }
+.graphique .droite { stroke: var(--texte); stroke-width: 2.5; fill: none; stroke-linecap: round; }
+.graphique .limite { stroke: var(--discret); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.graphique .pt-mort { fill: var(--carte); stroke: var(--texte); stroke-width: 2.5; }
+.graphique .pt-toi { fill: var(--accent); stroke: var(--carte); stroke-width: 2; }
+.graphique text { fill: var(--discret); font-size: 10px; font-family: inherit; }
+.legende { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 13px; color: var(--discret); }
+.legende li { display: flex; align-items: center; gap: 8px; }
+.legende b { color: var(--texte); font-variant-numeric: tabular-nums; }
+.puce { width: 12px; height: 12px; border-radius: 50%; flex: none; box-sizing: border-box; }
+.puce.toi { background: var(--accent); }
+.puce.mort { border: 2.5px solid var(--texte); }
+.puce.limite { height: 0; border-radius: 0; border-top: 2px dashed var(--discret); }
+
+.minute { margin-top: 12px; border-color: var(--accent); }
+.minute-texte { margin: 6px 0 0; font-size: 15px; font-weight: 600; }
 .grille-chiffres { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.grille-chiffres .chiffre, .grille-chiffres .note { display: block; }
 
 /* ---------- Message et pied de page ---------- */
 

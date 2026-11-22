@@ -493,10 +493,16 @@ function valeurAvecUnite(champ, valeur) {
   return valeur.toLocaleString("fr-FR") + " " + champ.unite;
 }
 
-/* Fabrique un curseur par ligne de CHAMPS_RENTA. Appelée une seule fois au démarrage. */
+/* Fabrique un curseur par ligne de CHAMPS_RENTA, avec un titre à chaque changement de groupe.
+   Appelée une seule fois au démarrage. */
 function construireCurseurs() {
   const formulaire = $("form-renta");
+  let groupe = "";
   for (const champ of CHAMPS_RENTA) {
+    if (champ.groupe !== groupe) {
+      groupe = champ.groupe;
+      formulaire.append(creer("h4", "", groupe));
+    }
     const bloc = creer("div", "curseur");
     const tete = creer("div", "curseur-tete");
     const etiquette = creer("label", "", champ.nom);
@@ -522,6 +528,65 @@ function construireCurseurs() {
   }
 }
 
+/* Un chiffre après la virgule au plus, à la française : 3,6. */
+function unChiffre(nombre) {
+  return (Math.round(nombre * 10) / 10).toLocaleString("fr-FR");
+}
+
+/* Crée un élément SVG (il faut un espace de noms, createElement ne suffit pas). */
+function svg(balise, attributs, texte) {
+  const element = document.createElementNS("http://www.w3.org/2000/svg", balise);
+  for (const nom in attributs) element.setAttribute(nom, attributs[nom]);
+  if (texte !== undefined) element.textContent = texte;
+  return element;
+}
+
+/* Dessine la droite « résultat du mois selon le nombre de voitures par jour ».
+   Elle part de −charges fixes (zéro voiture) et monte de la marge à chaque voiture.
+   Là où elle coupe l'axe du zéro, c'est le point mort. */
+function dessinerGraphique(r) {
+  const dessin = $("renta-graphique");
+  dessin.replaceChildren();
+  const L = 320, H = 170, gauche = 8, droite = 8, haut = 12, bas = 24;
+
+  // Axe horizontal : de 0 à un peu plus loin que la capacité et le point mort.
+  const xMax = Math.max(r.capaciteJour, Math.ceil(r.pointMortJour || 0), 1) + 1;
+  const resultatPour = (voituresJour) => voituresJour * renta.joursMois * r.margeParVoiture - renta.chargesFixes;
+
+  // Axe vertical : il doit contenir le zéro et les deux bouts de la droite.
+  const debut = resultatPour(0), fin = resultatPour(xMax);
+  let mini = Math.min(debut, fin, 0), maxi = Math.max(debut, fin, 0);
+  if (maxi === mini) maxi = mini + 1;
+  const marge = (maxi - mini) * 0.08;
+  mini -= marge; maxi += marge;
+
+  const X = (v) => gauche + (v / xMax) * (L - gauche - droite);
+  const Y = (v) => haut + ((maxi - v) / (maxi - mini)) * (H - haut - bas);
+  const yZero = Y(0), yBas = H - bas;
+
+  dessin.append(
+    svg("rect", { class: "zone-gain", x: gauche, y: haut, width: L - gauche - droite, height: yZero - haut }),
+    svg("rect", { class: "zone-perte", x: gauche, y: yZero, width: L - gauche - droite, height: yBas - yZero }),
+    svg("line", { class: "axe", x1: gauche, y1: yZero, x2: L - droite, y2: yZero }),
+    svg("text", { x: gauche + 4, y: yZero - 4 }, "0 €"),
+    svg("line", { class: "limite", x1: X(r.capaciteJour), y1: haut, x2: X(r.capaciteJour), y2: yBas }),
+    svg("line", { class: "droite", x1: X(0), y1: Y(debut), x2: X(xMax), y2: Y(fin) }),
+    svg("text", { x: gauche, y: H - 8 }, "0"),
+    svg("text", { x: L - droite, y: H - 8, "text-anchor": "end" }, xMax + " voitures par jour")
+  );
+  if (r.pointMortJour !== null && r.pointMortJour <= xMax) {
+    dessin.append(svg("circle", { class: "pt-mort", cx: X(r.pointMortJour), cy: yZero, r: 5 }));
+  }
+  dessin.append(svg("circle", { class: "pt-toi", cx: X(r.voituresJour), cy: Y(r.resultat), r: 6.5 }));
+}
+
+/* Une ligne de légende : une puce, un libellé, une valeur en gras. */
+function ligneLegende(classePuce, libelle, valeur) {
+  const ligne = creer("li");
+  ligne.append(creer("span", "puce " + classePuce), libelle + " ", creer("b", "", valeur));
+  return ligne;
+}
+
 function rendreRentabilite(phases) {
   const duree = dureePrestation(phases);
   const r = calculerRentabilite(renta, duree.secondes);
@@ -532,33 +597,58 @@ function rendreRentabilite(phases) {
     ? presta.nom + " : moyenne mesurée sur " + duree.mesures + " session(s) complète(s)."
     : presta.nom + " : estimation d'après tes cibles. Enregistre une session complète pour avoir ta vraie durée.";
 
+  // Le verdict : une phrase, et une couleur selon la situation.
+  const parJour = r.pointMortJour === null ? null : unChiffre(Math.ceil(r.pointMortJour * 10) / 10);
+  const moyenne = unChiffre(r.voituresJour);
   const verdict = $("renta-verdict");
-  const jauge = $("renta-jauge");
-  verdict.classList.toggle("trop", !r.rentable);
-  jauge.classList.toggle("trop", !r.rentable);
-
-  if (r.pointMortMois === null) {
-    verdict.textContent = "Chaque voiture coûte plus en produits qu'elle ne rapporte : aucun volume ne rend l'activité rentable.";
-    jauge.style.width = "100%";
-    $("renta-legende").textContent = "";
-    $("renta-pointmort").textContent = "—";
+  verdict.classList.toggle("trop", r.etat === "vide" || r.etat === "perte" || r.etat === "impossible");
+  verdict.classList.toggle("juste", r.etat === "juste");
+  if (r.etat === "vide") {
+    verdict.textContent = "Aucune voiture ne tient dans ta journée : la prestation et le battement durent plus longtemps que ton temps de travail.";
+  } else if (r.etat === "perte") {
+    verdict.textContent = "Chaque voiture te coûte de l'argent : une fois les cotisations et les produits payés, il ne reste rien. Aucun volume ne rend l'activité rentable.";
+  } else if (r.etat === "impossible") {
+    verdict.textContent = "Ça ne tient pas : il faudrait " + parJour + " voiture(s) par jour pour couvrir tes charges, mais une journée n'en contient que " + r.capaciteJour + ", même avec un planning plein.";
+  } else if (r.etat === "juste") {
+    verdict.textContent = "Faisable, mais pas avec ce remplissage : tu fais " + moyenne + " voiture(s) par jour en moyenne, il en faut " + parJour + ". Il te manque " + euros(-r.resultat) + " par mois.";
   } else {
-    const parJour = Math.ceil(r.pointMortJour * 10) / 10;
-    verdict.textContent = r.rentable
-      ? "Ça tient : il faut " + parJour.toLocaleString("fr-FR") + " voiture(s) par jour pour couvrir tes charges, et tu peux en faire " + r.capaciteJour + "."
-      : "Ça ne tient pas : il faudrait " + parJour.toLocaleString("fr-FR") + " voiture(s) par jour, mais une journée n'en contient que " + r.capaciteJour + ".";
-    // La jauge entière représente la capacité du mois ; la partie remplie, le point mort.
-    jauge.style.width = (r.capaciteMois > 0 ? Math.min(100, (r.pointMortMois / r.capaciteMois) * 100) : 100) + "%";
-    $("renta-legende").textContent = r.pointMortMois + " voitures à faire sur " + r.capaciteMois + " possibles dans le mois.";
-    $("renta-pointmort").textContent = parJour.toLocaleString("fr-FR");
+    verdict.textContent = "Ça tient : avec " + moyenne + " voiture(s) par jour en moyenne, "
+      + (r.pointMortMois === 0 ? "tu n'as aucune charge fixe à couvrir" : "tu couvres tes charges (" + parJour + " suffisent)")
+      + " et il te reste " + euros(r.resultat) + " par mois.";
   }
 
-  $("renta-capacite").textContent = String(r.capaciteJour);
+  dessinerGraphique(r);
+  $("renta-legende").replaceChildren(
+    ligneLegende("toi", "Toi aujourd'hui :", moyenne + " voitures par jour"),
+    ligneLegende("mort", "Point mort :", parJour === null ? "inatteignable" : parJour + " voitures par jour"),
+    ligneLegende("limite", "Planning plein :", r.capaciteJour + " voitures par jour")
+  );
+
   const resultat = $("renta-resultat");
-  resultat.textContent = euros(r.resultatMax);
-  resultat.classList.toggle("trop", r.resultatMax < 0);
-  resultat.classList.toggle("ok", r.resultatMax >= 0);
+  resultat.textContent = euros(r.resultat);
+  resultat.classList.toggle("trop", r.resultat < 0);
+  resultat.classList.toggle("ok", r.resultat >= 0);
+  $("renta-resultat-note").textContent = "à " + moyenne + " voitures par jour";
+  const plein = $("renta-resultat-max");
+  plein.textContent = euros(r.resultatMax);
+  plein.classList.toggle("trop", r.resultatMax < 0);
+  plein.classList.toggle("ok", r.resultatMax >= 0);
+  $("renta-capacite").textContent = "à " + r.capaciteJour + " voitures par jour";
+  $("renta-pointmort").textContent = parJour === null ? "—" : parJour;
   $("renta-horaire").textContent = euros(r.tauxHoraire);
+
+  // Ce que vaut le chrono : le gain de temps qui fait entrer une voiture de plus.
+  const suivante = prochaineVoiture(renta, duree.secondes);
+  const minute = $("renta-minute");
+  if (r.margeParVoiture <= 0) {
+    minute.textContent = "Tant qu'une voiture ne rapporte rien, aller plus vite ne change rien.";
+  } else if (suivante === null) {
+    minute.textContent = "Avec ce battement, impossible de caser une voiture de plus dans la journée, même en allant plus vite.";
+  } else {
+    minute.textContent = "Gagne " + suivante.minutesAGagner + " min par voiture (de " + mmss(duree.secondes) + " à " + mmss(suivante.dureeVisee)
+      + ") : tu en cases " + suivante.capaciteJour + " par jour au lieu de " + r.capaciteJour
+      + ", soit " + euros(suivante.gainMensuel) + " de plus par mois à remplissage égal.";
+  }
 }
 
 /* ================= 6. Voix, écran, thème, démarrage ================= */

@@ -176,16 +176,22 @@
         <p id="renta-verdict" class="verdict"></p>
 
         <div class="carte">
-          <span class="etiquette">Point mort par rapport à ta capacité</span>
-          <div class="jauge jauge-haute"><div id="renta-jauge" class="jauge-remplie"></div></div>
-          <p id="renta-legende" class="note"></p>
+          <span class="etiquette">Ce qu'il te reste à la fin du mois, selon le nombre de voitures par jour</span>
+          <!-- Le graphique est dessiné par app.js (dessinerGraphique) -->
+          <svg id="renta-graphique" class="graphique" viewBox="0 0 320 170" role="img" aria-labelledby="renta-legende"></svg>
+          <ul id="renta-legende" class="legende"></ul>
         </div>
 
         <div class="grille-chiffres">
-          <div class="compteur"><span class="etiquette">Capacité</span><strong id="renta-capacite" class="chiffre">—</strong><span class="note">voitures par jour</span></div>
+          <div class="compteur"><span class="etiquette">Résultat mensuel</span><strong id="renta-resultat" class="chiffre">—</strong><span id="renta-resultat-note" class="note"></span></div>
+          <div class="compteur"><span class="etiquette">Planning plein</span><strong id="renta-resultat-max" class="chiffre">—</strong><span id="renta-capacite" class="note"></span></div>
           <div class="compteur"><span class="etiquette">Point mort</span><strong id="renta-pointmort" class="chiffre">—</strong><span class="note">voitures par jour</span></div>
-          <div class="compteur"><span class="etiquette">Résultat mensuel</span><strong id="renta-resultat" class="chiffre">—</strong><span class="note">à pleine capacité</span></div>
           <div class="compteur"><span class="etiquette">Marge par heure</span><strong id="renta-horaire" class="chiffre">—</strong><span class="note">de travail sur la voiture</span></div>
+        </div>
+
+        <div class="carte minute">
+          <span class="etiquette">Ce que vaut ton chrono</span>
+          <p id="renta-minute" class="minute-texte"></p>
         </div>
       </section>
     </main>
